@@ -2,7 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Updated Viewport to prevent auto-zoom on inputs -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bangkok Trip (Cloud Sync)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,6 +41,9 @@
         
         /* Loading Overlay */
         .loading-overlay { position: fixed; inset: 0; background: rgba(240, 244, 248, 0.95); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 20px; }
+        
+        /* Prevent font scaling issues on iOS inputs */
+        input, textarea, select { font-size: 16px !important; }
     </style>
 </head>
 <body class="h-screen overflow-hidden bg-[#E8EEF2]">
@@ -229,7 +233,7 @@
                                     <!-- Add Comment Input -->
                                     <div class="flex gap-2 items-center mt-2 pt-2 border-t border-slate-200/50">
                                         <div class="w-7 h-7 rounded-full flex items-center justify-center text-[12px] opacity-80 shadow-sm border border-white" :class="currentUser.bgColor">{{ currentUser.avatar }}</div>
-                                        <input v-model="newCommentTexts[event.id]" placeholder="Write a comment..." class="flex-1 bg-white/80 border border-slate-200 rounded-full px-3 py-2 text-xs focus:ring-2 focus:ring-[#7CA1B3]/50 focus:outline-none placeholder:text-slate-400" @keyup.enter="addComment(event)">
+                                        <input v-model="newCommentTexts[event.id]" placeholder="Write a comment..." class="flex-1 bg-white/80 border border-slate-200 rounded-full px-3 py-2 text-base focus:ring-2 focus:ring-[#7CA1B3]/50 focus:outline-none placeholder:text-slate-400" @keyup.enter="addComment(event)">
                                         <button @click="addComment(event)" class="text-white bg-[#5D6F80] hover:bg-[#4A5A6A] p-2 rounded-full shadow-md transition-transform active:scale-95"><i data-lucide="send" class="w-3.5 h-3.5"></i></button>
                                     </div>
                                 </div>
@@ -368,6 +372,7 @@
                 const TRIP_DOC_ID = 'bangkok2025_trip_data'; // The ID in Firestore
                 const isRemoteUpdate = ref(false); // Flag to prevent infinite loop
                 let saveTimeout = null; // For debouncing
+                const USER_STORAGE_KEY = 'bangkok_trip_current_user_id'; // LocalStorage Key
 
                 // --- Default Data ---
                 const defaultEvents = [
@@ -516,6 +521,13 @@
                                 if(data.expenses) expenses.value = data.expenses;
                                 if(data.users) users.value = data.users;
                                 
+                                // Restore User from LocalStorage after loading users
+                                const savedUid = localStorage.getItem(USER_STORAGE_KEY);
+                                if(savedUid) {
+                                    const found = users.value.find(u => u.id === savedUid);
+                                    if(found) currentUser.value = found;
+                                }
+
                                 nextTick(() => { isRemoteUpdate.value = false; refreshIcons(); }); 
 
                                 // Fix for empty cloud data
@@ -594,8 +606,20 @@
                 const colorOptions = [{ bg: 'bg-indigo-100', text: 'text-indigo-600' }, { bg: 'bg-emerald-100', text: 'text-emerald-600' }, { bg: 'bg-rose-100', text: 'text-rose-600' }, { bg: 'bg-amber-100', text: 'text-amber-600' }, { bg: 'bg-sky-100', text: 'text-sky-600' }, { bg: 'bg-purple-100', text: 'text-purple-600' }];
                 const showUserModal = ref(false);
                 const setNewUserColor = (c) => { newUser.value.bgColor = c.bg; newUser.value.textColor = c.text; };
-                const createUser = () => { if(!newUser.value.name) return; const u = { id: 'u'+Date.now(), ...newUser.value }; users.value.push(u); currentUser.value = u; newUser.value = { name: '', avatar: '😎', bgColor: 'bg-indigo-100', textColor: 'text-indigo-600' }; showUserModal.value = false; };
-                const switchUser = (u) => { currentUser.value = u; showUserModal.value = false; };
+                const createUser = () => { 
+                    if(!newUser.value.name) return; 
+                    const u = { id: 'u'+Date.now(), ...newUser.value }; 
+                    users.value.push(u); 
+                    currentUser.value = u; 
+                    localStorage.setItem(USER_STORAGE_KEY, u.id); // Save user
+                    newUser.value = { name: '', avatar: '😎', bgColor: 'bg-indigo-100', textColor: 'text-indigo-600' }; 
+                    showUserModal.value = false; 
+                };
+                const switchUser = (u) => { 
+                    currentUser.value = u; 
+                    localStorage.setItem(USER_STORAGE_KEY, u.id); // Save user
+                    showUserModal.value = false; 
+                };
                 const getUser = (id) => users.value.find(u => u.id === id) || { name: 'Unknown', avatar: '?', bgColor: 'bg-gray-100', textColor: 'text-gray-500' };
 
                 // Comments
