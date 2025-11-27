@@ -5,17 +5,16 @@
     <!-- Updated Viewport to prevent auto-zoom on inputs -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- iOS Web App Config (加入主畫面設定) -->
+    <!-- iOS Web App Config -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="BKK 2025"> <!-- 主畫面顯示的 App 名稱 -->
+    <meta name="apple-mobile-web-app-title" content="BKK 2025">
     
-    <!-- App Icon: 指向與此網頁同一層目錄下的 icon.png -->
-    <!-- 請確認您已將圖片命名為 icon.png 並上傳到 GitHub Repository -->
+    <!-- App Icon -->
     <link rel="apple-touch-icon" href="/icon.png">
-    <link rel="icon" type="image/png" href="icon.png"> <!-- 網頁頁籤圖示 -->
+    <link rel="icon" type="image/png" href="/icon.png">
     
-    <title>Bangkok Trip (Cloud Sync)</title>
+    <title>Bangkok Trip (Cloud Sync + AI)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue 3 -->
@@ -24,25 +23,29 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
         body { font-family: 'DM Sans', 'Noto Sans TC', sans-serif; background-color: #F0F4F8; color: #334155; }
         
-        /* Base Glass Card (Default/Admin) */
+        /* Glass Cards */
         .glass-card { 
             background: rgba(255, 255, 255, 0.65); 
-            backdrop-filter: blur(16px); 
-            -webkit-backdrop-filter: blur(16px); 
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); 
             border: 1px solid rgba(255, 255, 255, 0.8); 
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07); 
         }
-
-        /* Member Colored Card Base Style */
         .member-card {
-            backdrop-filter: blur(16px); 
-            -webkit-backdrop-filter: blur(16px); 
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); 
             border: 1px solid rgba(255, 255, 255, 0.6); 
             box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05); 
+        }
+        .ai-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 249, 255, 0.9) 100%);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 10px 40px -10px rgba(99, 102, 241, 0.15);
         }
 
         .glass-header { background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255, 255, 255, 0.5); }
@@ -50,11 +53,15 @@
         .modal-enter-active, .modal-leave-active { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); } .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.95); }
         .comment-enter-active, .comment-leave-active { transition: all 0.2s ease; } .comment-enter-from, .comment-leave-to { opacity: 0; transform: translateY(-10px); }
         
-        /* Loading Overlay */
         .loading-overlay { position: fixed; inset: 0; background: rgba(240, 244, 248, 0.95); backdrop-filter: blur(5px); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 20px; }
-        
-        /* Prevent font scaling issues on iOS inputs */
         input, textarea, select { font-size: 16px !important; }
+
+        /* AI Gradient Text */
+        .text-gradient-ai {
+            background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
     </style>
 </head>
 <body class="h-screen overflow-hidden bg-[#E8EEF2]">
@@ -91,12 +98,20 @@
                 <p class="text-[10px] text-[#788998] tracking-[0.3em] mt-1 font-bold uppercase">Cloud Sync 2025</p>
             </div>
             <div class="flex flex-col items-end gap-2">
-                 <button @click="showUserModal = true" class="flex items-center gap-2 bg-white/40 pl-3 pr-1 py-1 rounded-full backdrop-blur-sm border border-white/50 hover:bg-white/60 transition-all shadow-sm">
-                    <span class="text-xs font-bold text-[#5D6F80] truncate max-w-[60px]">{{ currentUser.name }}</span>
-                    <div class="w-7 h-7 rounded-full flex items-center justify-center text-sm shadow-sm" :class="currentUser.bgColor || 'bg-slate-200'">
-                        {{ currentUser.avatar }}
-                    </div>
-                </button>
+                 <div class="flex gap-2">
+                     <!-- AI Button -->
+                     <button @click="showAIModal = true" class="p-2 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-500 hover:bg-indigo-100 transition-colors relative group">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span class="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" v-if="!apiKey"></span>
+                     </button>
+                     <!-- User Profile -->
+                     <button @click="showUserModal = true" class="flex items-center gap-2 bg-white/40 pl-3 pr-1 py-1 rounded-full backdrop-blur-sm border border-white/50 hover:bg-white/60 transition-all shadow-sm">
+                        <span class="text-xs font-bold text-[#5D6F80] truncate max-w-[60px]">{{ currentUser.name }}</span>
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-sm shadow-sm" :class="currentUser.bgColor || 'bg-slate-200'">
+                            {{ currentUser.avatar }}
+                        </div>
+                    </button>
+                 </div>
                 <!-- Online Indicator -->
                 <div class="flex items-center gap-1 bg-green-100/50 px-2 py-0.5 rounded-full border border-green-200">
                     <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
@@ -116,11 +131,10 @@
             </div>
         </div>
 
-        <!-- Main Content -->
+        <!-- Main Content (Same as before) -->
         <main class="flex-1 overflow-y-auto px-4 pb-28 scrollbar-hide relative z-10">
             <!-- TRIP TAB -->
             <div v-if="currentTab === 'trip'" class="space-y-4">
-                <!-- Info Header -->
                 <div class="glass-card rounded-2xl p-4 flex justify-between items-center mb-2">
                     <div class="flex items-center gap-3">
                         <div class="bg-blue-100/50 p-2 rounded-full text-[#5D6F80]"><i data-lucide="building-2" class="w-4 h-4"></i></div>
@@ -137,99 +151,48 @@
                     </div>
                 </div>
 
-                <!-- Empty State -->
                 <div v-if="currentDayEvents.length === 0" class="text-center py-12 opacity-50">
                     <p class="font-serif italic text-lg text-slate-500">No plans yet...</p>
                 </div>
 
-                <!-- Timeline -->
                 <div class="relative space-y-4 pl-2">
                     <div class="absolute left-[27px] top-4 bottom-4 w-[1px] bg-slate-300/50 -z-10"></div>
                     <div v-for="event in currentDayEvents" :key="event.id" class="relative group">
-                        
-                        <!-- Timeline Dot -->
                         <div class="absolute left-0 top-6 w-[54px] flex justify-center z-20">
                             <div class="w-3 h-3 rounded-full border-2 border-white shadow-sm" :class="getDotColor(event.type)"></div>
                         </div>
-
-                        <!-- EVENT CARD: Dynamic Background -->
                         <div class="rounded-[24px] p-4 ml-8 transition-all duration-300" :class="getCardStyle(event.userId)">
-                            
-                            <!-- Delete Button (Visible with white bg) -->
                             <button @click="deleteEvent(event.id)" class="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors p-1.5 bg-white rounded-full shadow-sm z-20">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                             </button>
-
                             <div class="flex justify-between items-start mb-2 pr-8">
                                 <span class="text-lg font-bold text-[#5D6F80] font-serif">{{ event.time }}</span>
                                 <span class="text-[10px] px-2 py-1 rounded-full bg-white/50 text-slate-500 border border-white/60 font-medium tracking-wide">{{ event.typeLabel || 'ACTIVITY' }}</span>
                             </div>
-                            
                             <h3 class="text-base font-bold text-slate-700 mb-1 leading-tight">{{ event.title }}</h3>
-                            
-                            <div v-if="event.desc" class="text-xs text-slate-500 mb-2 leading-relaxed bg-white/30 p-2 rounded-lg border border-white/20">
-                                {{ event.desc }}
-                            </div>
-
+                            <div v-if="event.desc" class="text-xs text-slate-500 mb-2 leading-relaxed bg-white/30 p-2 rounded-lg border border-white/20">{{ event.desc }}</div>
                             <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-500/10">
-                                <div class="flex items-center text-slate-500 text-xs gap-1">
-                                    <i data-lucide="map-pin" class="w-3 h-3"></i>
-                                    <span class="truncate w-24">{{ event.location }}</span>
-                                </div>
+                                <div class="flex items-center text-slate-500 text-xs gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i><span class="truncate w-24">{{ event.location }}</span></div>
                                 <div class="flex gap-2">
-                                    <!-- Comment Icon (Visible with white bg) -->
-                                    <button @click="toggleComments(event.id)" class="flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-slate-50 transition-colors relative shadow-sm" :class="openCommentId === event.id ? 'bg-white text-[#5D6F80]' : 'bg-white/80 text-slate-500'">
-                                        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-                                        <span v-if="event.comments && event.comments.length > 0" class="text-[10px] font-bold">{{ event.comments.length }}</span>
-                                    </button>
-                                    
-                                    <!-- Edit Icon (Visible with white bg) -->
-                                    <button @click="editEvent(event)" class="p-1.5 rounded-full bg-white/80 hover:bg-white text-slate-500 transition-colors shadow-sm">
-                                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                                    </button>
-                                    
-                                    <!-- Nav Button -->
-                                    <a :href="getGoogleMapsLink(event.location)" target="_blank" class="flex items-center gap-1 bg-[#7CA1B3]/20 hover:bg-[#7CA1B3]/40 text-[#5D6F80] text-[10px] font-bold px-3 py-1.5 rounded-full transition-colors backdrop-blur-md">
-                                        NAV
-                                    </a>
+                                    <button @click="toggleComments(event.id)" class="flex items-center gap-1 px-2 py-1.5 rounded-full hover:bg-slate-50 transition-colors relative shadow-sm" :class="openCommentId === event.id ? 'bg-white text-[#5D6F80]' : 'bg-white/80 text-slate-500'"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i><span v-if="event.comments && event.comments.length > 0" class="text-[10px] font-bold">{{ event.comments.length }}</span></button>
+                                    <button @click="editEvent(event)" class="p-1.5 rounded-full bg-white/80 hover:bg-white text-slate-500 transition-colors shadow-sm"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                                    <a :href="getGoogleMapsLink(event.location)" target="_blank" class="flex items-center gap-1 bg-[#7CA1B3]/20 hover:bg-[#7CA1B3]/40 text-[#5D6F80] text-[10px] font-bold px-3 py-1.5 rounded-full transition-colors backdrop-blur-md">NAV</a>
                                 </div>
                             </div>
-
-                            <!-- Comment Section -->
                             <transition name="comment">
                                 <div v-if="openCommentId === event.id" class="mt-3 pt-2 bg-white/40 -mx-4 -mb-4 px-4 pb-4 rounded-b-[24px] border-t border-white/50 shadow-inner">
-                                    
-                                    <!-- Comment List -->
                                     <div v-if="event.comments && event.comments.length > 0" class="space-y-3 mb-3 max-h-60 overflow-y-auto scrollbar-hide">
                                         <div v-for="comment in event.comments" :key="comment.id" class="flex gap-2 items-start text-xs group/item">
-                                            
-                                            <!-- Avatar -->
-                                            <div class="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-[12px] shadow-sm mt-0.5 border border-white/50" :class="getUser(comment.userId).bgColor">
-                                                {{ getUser(comment.userId).avatar }}
-                                            </div>
-                                            
-                                            <!-- Comment Bubble -->
+                                            <div class="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-[12px] shadow-sm mt-0.5 border border-white/50" :class="getUser(comment.userId).bgColor">{{ getUser(comment.userId).avatar }}</div>
                                             <div class="flex-1">
-                                                <div class="flex justify-between items-baseline mb-0.5 ml-1">
-                                                    <span class="font-bold" :class="getUser(comment.userId).textColor">{{ getUser(comment.userId).name }}</span>
-                                                    <span class="text-[9px] text-slate-400 scale-90 origin-right">{{ formatTime(comment.timestamp) }}</span>
-                                                </div>
-                                                
-                                                <!-- Edit Mode -->
+                                                <div class="flex justify-between items-baseline mb-0.5 ml-1"><span class="font-bold" :class="getUser(comment.userId).textColor">{{ getUser(comment.userId).name }}</span><span class="text-[9px] text-slate-400 scale-90 origin-right">{{ formatTime(comment.timestamp) }}</span></div>
                                                 <div v-if="editingCommentId === comment.id" class="flex gap-1 items-center mb-1">
                                                     <input v-model="editingCommentText" class="flex-1 bg-white border border-blue-300 rounded px-2 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200" @keyup.enter="saveCommentEdit(event, comment)" ref="editInput">
                                                     <button @click="saveCommentEdit(event, comment)" class="text-green-600 p-1.5 bg-green-100 rounded hover:bg-green-200"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>
                                                     <button @click="cancelEditComment" class="text-slate-500 p-1.5 bg-slate-100 rounded hover:bg-slate-200"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
                                                 </div>
-
-                                                <!-- View Mode -->
-                                                <div v-else 
-                                                     class="text-slate-700 p-2.5 rounded-2xl shadow-sm relative pr-12 min-w-[80px] break-words transition-colors"
-                                                     :class="getCommentStyle(comment.userId)"
-                                                >
+                                                <div v-else class="text-slate-700 p-2.5 rounded-2xl shadow-sm relative pr-12 min-w-[80px] break-words transition-colors" :class="getCommentStyle(comment.userId)">
                                                     {{ comment.text }}
-                                                    
-                                                    <!-- Comment Actions (Always Visible if owner, with white bg) -->
                                                     <div v-if="comment.userId === currentUser.id" class="absolute top-1 right-1 flex gap-1 bg-white rounded-full px-1.5 py-0.5 shadow-sm border border-slate-100">
                                                         <button @click="startEditComment(comment)" class="text-slate-400 hover:text-blue-600 p-0.5"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
                                                         <button @click="deleteComment(event, comment.id)" class="text-slate-400 hover:text-red-500 p-0.5"><i data-lucide="trash" class="w-3 h-3"></i></button>
@@ -238,10 +201,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
                                     <div v-else class="text-center py-4 text-[10px] text-slate-400 italic">No comments yet.</div>
-                                    
-                                    <!-- Add Comment Input -->
                                     <div class="flex gap-2 items-center mt-2 pt-2 border-t border-slate-200/50">
                                         <div class="w-7 h-7 rounded-full flex items-center justify-center text-[12px] opacity-80 shadow-sm border border-white" :class="currentUser.bgColor">{{ currentUser.avatar }}</div>
                                         <input v-model="newCommentTexts[event.id]" placeholder="Write a comment..." class="flex-1 bg-white/80 border border-slate-200 rounded-full px-3 py-2 text-base focus:ring-2 focus:ring-[#7CA1B3]/50 focus:outline-none placeholder:text-slate-400" @keyup.enter="addComment(event)">
@@ -255,7 +215,7 @@
                 <div class="h-8"></div>
             </div>
 
-            <!-- SPLIT BILL TAB (Unchanged) -->
+            <!-- SPLIT BILL TAB -->
             <div v-else class="space-y-6 pt-2">
                  <div class="bg-gradient-to-br from-[#7CA1B3] to-[#5D6F80] rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden">
                     <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
@@ -299,17 +259,19 @@
             </div>
         </main>
 
-        <!-- Modals and Bottom Nav (Same as before) -->
+        <!-- Floating Buttons & Nav -->
         <button v-if="currentTab === 'trip'" @click="openModal()" class="absolute bottom-24 right-6 w-14 h-14 bg-[#5D6F80] text-white rounded-full shadow-[0_8px_30px_rgb(93,111,128,0.4)] flex items-center justify-center hover:scale-105 transition-all z-20 border border-white/20 backdrop-blur-sm"><i data-lucide="plus" class="w-6 h-6"></i></button>
         <nav class="absolute bottom-0 w-full glass-header flex justify-around items-center h-20 pb-2 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
             <button @click="currentTab = 'trip'" class="flex flex-col items-center gap-1 w-20 group"><div class="p-1.5 rounded-2xl transition-all duration-300 relative"><div class="absolute inset-0 bg-[#7CA1B3]/20 blur-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity" v-if="currentTab === 'trip'"></div><i data-lucide="map" class="w-5 h-5 relative z-10" :class="currentTab === 'trip' ? 'text-[#5D6F80] fill-[#5D6F80]/20' : 'text-slate-400'"></i></div><span class="text-[9px] font-bold tracking-widest transition-colors" :class="currentTab === 'trip' ? 'text-[#5D6F80]' : 'text-slate-400'">ITINERARY</span></button>
             <button @click="currentTab = 'split'" class="flex flex-col items-center gap-1 w-20 group"><div class="p-1.5 rounded-2xl transition-all duration-300 relative"><div class="absolute inset-0 bg-[#7CA1B3]/20 blur-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity" v-if="currentTab === 'split'"></div><i data-lucide="wallet" class="w-5 h-5 relative z-10" :class="currentTab === 'split' ? 'text-[#5D6F80] fill-[#5D6F80]/20' : 'text-slate-400'"></i></div><span class="text-[9px] font-bold tracking-widest transition-colors" :class="currentTab === 'split' ? 'text-[#5D6F80]' : 'text-slate-400'">EXPENSES</span></button>
         </nav>
 
+        <!-- Edit/New Modal -->
         <transition name="modal">
             <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4"><div class="absolute inset-0 bg-[#334155]/30 backdrop-blur-sm transition-opacity" @click="closeModal"></div><div class="bg-[#F8FAFC] w-full max-w-sm rounded-[32px] p-6 relative shadow-2xl z-50 transform transition-all border border-white"><h3 class="text-xl font-serif italic font-bold mb-6 text-[#5D6F80]">{{ isEditing ? 'Edit Plan' : 'New Plan' }}</h3><div class="space-y-4"><div><label class="block text-[10px] uppercase font-bold text-slate-400 mb-1.5 tracking-wider">Time</label><input type="time" v-model="form.time" class="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-slate-700 focus:ring-2 focus:ring-[#7CA1B3]/30"></div><div><label class="block text-[10px] uppercase font-bold text-slate-400 mb-1.5 tracking-wider">Activity</label><input type="text" v-model="form.title" class="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-slate-700 focus:ring-2 focus:ring-[#7CA1B3]/30"></div><div><label class="block text-[10px] uppercase font-bold text-slate-400 mb-1.5 tracking-wider">Location</label><input type="text" v-model="form.location" class="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-slate-700 focus:ring-2 focus:ring-[#7CA1B3]/30"></div><div><label class="block text-[10px] uppercase font-bold text-slate-400 mb-1.5 tracking-wider">Type</label><select v-model="form.typeLabel" class="w-full bg-slate-100 border-none rounded-xl px-4 py-3 text-slate-700 focus:ring-2 focus:ring-[#7CA1B3]/30"><option>FLIGHT</option><option>HOTEL</option><option>FOOD</option><option>ACTIVITY</option><option>SHOPPING</option></select></div></div><div class="flex gap-3 mt-8"><button @click="closeModal" class="flex-1 py-3 rounded-xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-colors">Cancel</button><button @click="saveEvent" class="flex-1 py-3 rounded-xl bg-[#5D6F80] text-white font-bold hover:bg-[#4A5A6A] shadow-lg shadow-slate-400/30 transition-all">Save</button></div></div></div>
         </transition>
 
+        <!-- User Modal -->
         <transition name="modal">
             <div v-if="showUserModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
                 <div class="absolute inset-0 bg-[#334155]/30 backdrop-blur-sm transition-opacity" @click="showUserModal = false"></div>
@@ -339,8 +301,143 @@
                         </div>
                         <button @click="createUser" class="w-full py-3 rounded-xl bg-[#5D6F80] text-white font-bold hover:bg-[#4A5A6A] shadow-lg shadow-slate-400/30 mt-2 transition-all">Create & Login</button>
                     </div>
-                    <div class="mt-4 text-center">
-                        <button @click="showUserModal = false" class="text-xs text-slate-400 underline">Close</button>
+                    <div class="mt-4 text-center"><button @click="showUserModal = false" class="text-xs text-slate-400 underline">Close</button></div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- ✨ AI Assistant Modal -->
+        <transition name="modal">
+            <div v-if="showAIModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-[#334155]/60 backdrop-blur-md transition-opacity" @click="showAIModal = false"></div>
+                <div class="ai-card w-full max-w-sm rounded-[32px] p-6 relative shadow-2xl z-50 transform transition-all overflow-hidden flex flex-col max-h-[85vh]">
+                    
+                    <!-- Header -->
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center gap-2">
+                            <div class="p-2 bg-indigo-100 rounded-full text-indigo-600">
+                                <i data-lucide="sparkles" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-800">AI 旅遊顧問</h3>
+                                <p class="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Powered by Gemini</p>
+                            </div>
+                        </div>
+                        <button @click="showAIModal = false" class="p-2 bg-slate-100 rounded-full text-slate-400 hover:bg-slate-200">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- API Key Setup (If missing) -->
+                    <div v-if="!apiKey" class="flex-1 flex flex-col justify-center text-center space-y-4">
+                        <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                            <i data-lucide="key" class="w-8 h-8"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-700">需要 API 金鑰</h4>
+                        <p class="text-xs text-slate-500 px-4">請輸入您的 Google Gemini API Key 以啟用 AI 功能。金鑰將僅儲存在您的手機中。</p>
+                        <input v-model="tempApiKey" placeholder="貼上 API Key..." class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500/50">
+                        <button @click="saveApiKey" class="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200">
+                            啟用 AI 功能
+                        </button>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-indigo-500 underline mt-2">取得免費 Key</a>
+                    </div>
+
+                    <!-- AI Interface -->
+                    <div v-else class="flex flex-col h-full overflow-hidden">
+                        
+                        <!-- Tabs -->
+                        <div class="flex p-1 bg-slate-100/80 rounded-xl mb-4 overflow-x-auto scrollbar-hide gap-1">
+                            <button @click="aiTab = 'itinerary'" class="flex-1 whitespace-nowrap py-2 text-xs font-bold rounded-lg transition-all" :class="aiTab === 'itinerary' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'">行程建議</button>
+                            <button @click="aiTab = 'thai'" class="flex-1 whitespace-nowrap py-2 text-xs font-bold rounded-lg transition-all" :class="aiTab === 'thai' ? 'bg-white text-pink-600 shadow-sm' : 'text-slate-400'">泰語幫手</button>
+                            <!-- Smart Planner Tab (Admin Only) -->
+                            <button v-if="currentUser.isAdmin" @click="aiTab = 'planner'" class="flex-1 whitespace-nowrap py-2 text-xs font-bold rounded-lg transition-all" :class="aiTab === 'planner' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400'">智慧排程</button>
+                        </div>
+
+                        <!-- Tab 1: Itinerary Advisor -->
+                        <div v-if="aiTab === 'itinerary'" class="flex-1 overflow-y-auto scrollbar-hide space-y-4">
+                            <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+                                <p class="text-xs text-indigo-800 font-medium mb-1">📅 {{ dates.find(d=>d.fullDate===selectedDate).monthStr }} 的行程</p>
+                                <p class="text-xs text-slate-500">AI 將分析今日安排，提供交通建議或附近隱藏景點。</p>
+                            </div>
+                            
+                            <div v-if="aiLoading" class="py-8 text-center space-y-3">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                                <p class="text-xs text-indigo-500 font-bold animate-pulse">AI 正在思考中...</p>
+                            </div>
+
+                            <div v-else-if="aiResponse" class="prose prose-sm max-w-none text-slate-600 text-xs bg-white p-4 rounded-2xl border border-slate-100 shadow-sm" v-html="parsedAiResponse"></div>
+
+                            <button v-if="!aiLoading" @click="analyzeItinerary" class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-bold shadow-lg shadow-indigo-200 hover:scale-[1.02] transition-transform flex items-center justify-center gap-2">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i> 分析今日行程
+                            </button>
+                        </div>
+
+                        <!-- Tab 2: Thai Translator + TTS -->
+                        <div v-if="aiTab === 'thai'" class="flex-1 overflow-y-auto scrollbar-hide space-y-4">
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase">我想說...</label>
+                                <textarea v-model="thaiInput" placeholder="例如：不要香菜、廁所在哪裡？" class="w-full h-20 bg-white border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-pink-500/50 focus:outline-none resize-none"></textarea>
+                            </div>
+
+                            <button @click="translateToThai" :disabled="!thaiInput || aiLoading" class="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold shadow-lg shadow-pink-200 hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 disabled:opacity-50">
+                                <span v-if="aiLoading" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                                <span v-else><i data-lucide="languages" class="w-4 h-4 inline mr-1"></i> 翻譯並播放</span>
+                            </button>
+
+                            <div v-if="thaiResult" class="bg-white p-4 rounded-2xl border border-pink-100 shadow-sm space-y-3 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 p-2 opacity-10 text-pink-500"><i data-lucide="mic" class="w-16 h-16"></i></div>
+                                <div>
+                                    <p class="text-2xl font-bold text-slate-800 mb-1">{{ thaiResult.thai }}</p>
+                                    <p class="text-sm text-pink-600 font-medium">{{ thaiResult.pronunciation }}</p>
+                                    <p class="text-xs text-slate-400 mt-2 border-t border-slate-100 pt-2">{{ thaiResult.meaning }}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button @click="playAudio(thaiResult.audioData)" class="flex-1 py-2 bg-pink-50 text-pink-600 rounded-lg text-xs font-bold hover:bg-pink-100 flex items-center justify-center gap-1">
+                                        <i data-lucide="volume-2" class="w-4 h-4"></i> 播放語音
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 3: Smart Planner (Admin Only) -->
+                        <div v-if="aiTab === 'planner'" class="flex-1 overflow-y-auto scrollbar-hide space-y-4">
+                            <div class="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100 text-xs text-slate-600">
+                                <p class="font-bold text-emerald-800 mb-1">🤖 AI 自動排程 (Beta)</p>
+                                <p>貼上文字行程（如「12/29 早上9點大皇宮...」），AI 將自動轉換為 App 行程卡片。</p>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">更新範圍</label>
+                                    <select v-model="smartPlanScope" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none">
+                                        <option value="all">整趟旅程 (自動偵測日期)</option>
+                                        <option :value="selectedDate">僅更新目前選擇日期 ({{ selectedDate }})</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">更新模式</label>
+                                    <div class="flex gap-2">
+                                        <button @click="smartPlanAction = 'append'" class="flex-1 py-2 rounded-lg border text-xs font-bold transition-all" :class="smartPlanAction === 'append' ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-400'">
+                                            追加 (保留舊行程)
+                                        </button>
+                                        <button @click="smartPlanAction = 'replace'" class="flex-1 py-2 rounded-lg border text-xs font-bold transition-all" :class="smartPlanAction === 'replace' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-400'">
+                                            覆蓋 (清空該日舊行程)
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <textarea v-model="smartPlanInput" placeholder="在此貼上行程文字..." class="w-full h-32 bg-white border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-emerald-500/50 focus:outline-none resize-none"></textarea>
+                            </div>
+
+                            <button @click="generateItineraryFromText" :disabled="!smartPlanInput || aiLoading" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold shadow-lg shadow-emerald-200 hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 disabled:opacity-50">
+                                <span v-if="aiLoading" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                                <span v-else><i data-lucide="wand-2" class="w-4 h-4 inline mr-1"></i> AI 生成並更新</span>
+                            </button>
+                            
+                            <p v-if="aiResponse" class="text-[10px] text-emerald-600 text-center animate-pulse">{{ aiResponse }}</p>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -348,7 +445,7 @@
 
     </div>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs & App Logic -->
     <script type="module">
         import { createApp, ref, computed, onMounted, nextTick, watch } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
@@ -357,10 +454,6 @@
 
         // -----------------------------------------------------------
         // 🔴 請在這裡填入您的 Firebase Config
-        // 1. 去 console.firebase.google.com 建立專案
-        // 2. 新增 Web App -> 複製 Config 物件貼在下面
-        // 3. 在 Firebase Console -> Firestore Database -> Create Database
-        // 4. 設定 Rules 為 allow read, write: if true; (測試用)
         // -----------------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyB9jFPE0kv9HsCpdhMZpKv39eOmgxWJtxs",
@@ -574,6 +667,187 @@
                     }
                 };
 
+                // --- AI Functions (Analysis & Translation) ---
+                const showAIModal = ref(false);
+                const aiTab = ref('itinerary');
+                const apiKey = ref(localStorage.getItem('gemini_api_key') || '');
+                const tempApiKey = ref('');
+                const aiLoading = ref(false);
+                const aiResponse = ref('');
+                const thaiInput = ref('');
+                const thaiResult = ref(null);
+                
+                // --- Smart Planner Vars ---
+                const smartPlanInput = ref('');
+                const smartPlanScope = ref('all'); // 'all' or specific date string
+                const smartPlanAction = ref('append'); // 'append' or 'replace'
+
+                const saveApiKey = () => { if(tempApiKey.value) { localStorage.setItem('gemini_api_key', tempApiKey.value); apiKey.value = tempApiKey.value; } };
+                const parsedAiResponse = computed(() => marked.parse(aiResponse.value));
+                
+                const analyzeItinerary = async () => {
+                    if (!apiKey.value) return;
+                    aiLoading.value = true; aiResponse.value = '';
+                    const dayEvents = currentDayEvents.value.map(e => `${e.time} - ${e.title} @ ${e.location}`).join('\n');
+                    const prompt = `Act as a local Bangkok guide. Here is my itinerary for today: \n${dayEvents}\n\n Please give me 2 specific, hidden gem suggestions (food or activity) that fit into this schedule logically. Also one logistical tip (transport/weather). Keep it concise, friendly, and use Traditional Chinese. Format with markdown bullet points.`;
+
+                    try {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey.value}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        });
+                        const data = await res.json();
+                        aiResponse.value = data.candidates?.[0]?.content?.parts?.[0]?.text || 'AI 暫時無法回應。';
+                    } catch (e) { aiResponse.value = "連線錯誤。"; } finally { aiLoading.value = false; }
+                };
+
+                const generateItineraryFromText = async () => {
+                    if (!apiKey.value || !smartPlanInput.value) return;
+                    aiLoading.value = true;
+                    aiResponse.value = "正在分析您的行程並轉換格式...";
+
+                    const targetDateStr = smartPlanScope.value === 'all' ? "Multiple dates possible" : selectedDate.value;
+                    const prompt = `
+                        System: You are an itinerary parser. The trip is in Bangkok, valid dates are 2025-12-27 to 2026-01-03.
+                        Task: Convert the user's text into a JSON array of events.
+                        User Input: "${smartPlanInput.value}"
+                        Context Target Date: ${targetDateStr}. (If user input mentions specific dates, use them. If not, assume the target date).
+                        
+                        Output JSON schema: Array of objects. Each object must have:
+                        - date: "YYYY-MM-DD"
+                        - time: "HH:MM" (24hr format, e.g. 14:00)
+                        - title: Short title (string)
+                        - location: Location name (string)
+                        - typeLabel: One of [FLIGHT, HOTEL, FOOD, ACTIVITY, SHOPPING] based on context.
+                        - desc: Description or notes (string, optional)
+                        
+                        IMPORTANT: Output ONLY valid JSON array. No markdown, no explanations.
+                    `;
+
+                    try {
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey.value}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        });
+                        const data = await res.json();
+                        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                        
+                        // Clean markdown if present
+                        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const newEvents = JSON.parse(jsonStr);
+
+                        if (Array.isArray(newEvents)) {
+                            // Process Events
+                            const processedEvents = newEvents.map(e => ({
+                                id: Date.now() + Math.floor(Math.random() * 10000), // Unique ID
+                                userId: 'admin', // Created by AI/Admin
+                                comments: [],
+                                ...e
+                            }));
+
+                            // Apply logic based on Scope & Action
+                            if (smartPlanScope.value === 'all') {
+                                // For each date found in new events, handle replace/append
+                                const datesToUpdate = [...new Set(processedEvents.map(e => e.date))];
+                                
+                                if (smartPlanAction.value === 'replace') {
+                                    // Remove old events on these dates
+                                    events.value = events.value.filter(e => !datesToUpdate.includes(e.date));
+                                }
+                                events.value.push(...processedEvents);
+                            } else {
+                                // Specific date mode
+                                const target = selectedDate.value;
+                                if (smartPlanAction.value === 'replace') {
+                                    events.value = events.value.filter(e => e.date !== target);
+                                }
+                                // Force date to match target if AI guessed wrong or was vague
+                                processedEvents.forEach(e => e.date = target);
+                                events.value.push(...processedEvents);
+                            }
+
+                            aiResponse.value = `成功加入 ${processedEvents.length} 個行程！`;
+                            smartPlanInput.value = ''; // Clear input
+                            refreshIcons();
+                        } else {
+                            throw new Error("Invalid JSON");
+                        }
+
+                    } catch (e) {
+                        console.error(e);
+                        aiResponse.value = "解析失敗，請確認格式或稍後再試。";
+                    } finally { aiLoading.value = false; }
+                };
+
+                // --- TTS & Translation ---
+                const pcmToWav = (base64PCM) => {
+                    const binaryString = atob(base64PCM);
+                    const len = binaryString.length;
+                    const buffer = new ArrayBuffer(44 + len);
+                    const view = new DataView(buffer);
+                    const writeString = (view, offset, string) => { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); };
+                    
+                    writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + len, true); writeString(view, 8, 'WAVE');
+                    writeString(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+                    view.setUint16(22, 1, true); view.setUint32(24, 24000, true); view.setUint32(28, 48000, true);
+                    view.setUint16(32, 2, true); view.setUint16(34, 16, true); writeString(view, 36, 'data');
+                    view.setUint32(40, len, true);
+                    
+                    const pcmData = new Uint8Array(buffer, 44);
+                    for (let i = 0; i < len; i++) pcmData[i] = binaryString.charCodeAt(i);
+                    return new Blob([view], { type: 'audio/wav' });
+                };
+
+                const translateToThai = async () => {
+                    if (!apiKey.value || !thaiInput.value) return;
+                    aiLoading.value = true;
+                    thaiResult.value = null;
+
+                    // 1. Text Generation
+                    const textPrompt = `Translate this to Thai for a tourist to say. Output ONLY valid JSON format: {"thai": "...", "pronunciation": "...", "meaning": "..."}. Phrase: "${thaiInput.value}"`;
+                    
+                    try {
+                        // Parallel: Get Text info AND Audio
+                        const textReq = fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey.value}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                contents: [{ parts: [{ text: textPrompt }] }],
+                                generationConfig: { responseMimeType: "application/json" }
+                            })
+                        });
+
+                        const resText = await textReq;
+                        const dataText = await resText.json();
+                        const jsonText = JSON.parse(dataText.candidates[0].content.parts[0].text);
+
+                        // 2. Audio Generation (Using the Thai text from step 1)
+                        const audioReq = fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey.value}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                contents: [{ parts: [{ text: jsonText.thai }] }],
+                                generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } } }
+                            })
+                        });
+
+                        const resAudio = await audioReq;
+                        const dataAudio = await resAudio.json();
+                        const audioBase64 = dataAudio.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+                        thaiResult.value = { ...jsonText, audioData: audioBase64 };
+
+                    } catch (e) {
+                        console.error(e);
+                        alert("翻譯失敗，請確認 API Key 或網路連線。");
+                    } finally { aiLoading.value = false; }
+                };
+
+                const playAudio = (base64) => {
+                    if(!base64) return;
+                    const blob = pcmToWav(base64);
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    audio.play();
+                };
+
                 // Real-time Listener
                 onMounted(() => {
                     lucide.createIcons();
@@ -766,11 +1040,15 @@
                     showModal, openModal, closeModal, saveEvent, form, isEditing, 
                     weatherData, getWeatherIcon, toggleComments, openCommentId, addComment, newCommentTexts, deleteComment, formatTime, editEvent,
                     startEditComment, saveCommentEdit, cancelEditComment, editingCommentId, editingCommentText, getCardStyle, getCommentStyle,
-                    getGoogleMapsLink
+                    getGoogleMapsLink,
+                    // AI Exports
+                    showAIModal, aiTab, apiKey, tempApiKey, saveApiKey, analyzeItinerary, aiLoading, aiResponse, parsedAiResponse,
+                    thaiInput, translateToThai, thaiResult, playAudio,
+                    // Smart Planner Exports
+                    smartPlanInput, smartPlanScope, smartPlanAction, generateItineraryFromText
                 };
             }
         }).mount('#app');
     </script>
 </body>
 </html>
-
