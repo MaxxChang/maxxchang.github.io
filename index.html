@@ -623,7 +623,17 @@
                                 const data = doc.data();
                                 if(data.events) events.value = data.events;
                                 if(data.expenses) expenses.value = data.expenses;
-                                if(data.users) users.value = data.users;
+                                
+                                // FIX: Merge remote users but Ensure Admin Exists
+                                if(data.users) {
+                                    users.value = data.users;
+                                    // Check if admin is missing (old DB data overwriting new code)
+                                    const adminExists = users.value.find(u => u.id === 'admin');
+                                    if (!adminExists) {
+                                        console.log("Admin missing from cloud data, restoring...");
+                                        users.value.unshift({ id: 'admin', name: '管理者', avatar: '🛡️', bgColor: 'bg-white/80', textColor: 'text-slate-900', isAdmin: true });
+                                    }
+                                }
                                 
                                 // Restore User from LocalStorage after loading users
                                 const savedUid = localStorage.getItem(USER_STORAGE_KEY);
