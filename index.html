@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>My Tour - Thailand</title>
     
     <!-- Vue 3 -->
@@ -54,6 +54,8 @@
                 radial-gradient(at 100% 0%, hsla(348,45%,78%,1) 0, transparent 50%);
             background-attachment: fixed;
             min-height: 100vh;
+            /* 防止 iOS 點擊閃爍 */
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* Vue 防閃爍機制：在 Vue 載入完成前隱藏所有內容 */
@@ -191,6 +193,7 @@
                         <span class="text-lg font-bold text-gray-800">{{ headerInfo.temperature }}°</span>
                     </div>
                     <div class="flex flex-col items-end ml-1 pl-2 border-l border-gray-200">
+                        <!-- 當沒有選取日期時，顯示今日 -->
                         <span class="text-[10px] font-bold text-gray-500">{{ getWeekDay(currentSelectedDate || new Date()) }}</span>
                         <span class="text-[10px] text-gray-400 font-mono">{{ (currentSelectedDate || new Date()).getMonth() + 1 }}/{{ (currentSelectedDate || new Date()).getDate() }}</span>
                     </div>
@@ -521,20 +524,21 @@
         </div>
     </div>
 
-    <!-- 登入 (角色選擇) Modal (Updated with Fixed Bottom Admin/Add) -->
-    <div v-if="!currentUser && !isRegistering" class="fixed inset-0 z-[60] flex items-center justify-center px-4">
+    <!-- 登入 (角色選擇) Modal (Updated with Dynamic Height + Fixed Bottom) -->
+    <!-- 修正：使用 max-h-[85dvh] 與 flex-col 確保不會超出手機畫面 -->
+    <div v-if="!currentUser && !isRegistering" class="fixed inset-0 z-[60] flex items-center justify-center px-4 p-safe">
         <div class="absolute inset-0 bg-morandi-400/30 backdrop-blur-md"></div>
-        <div class="bg-white/90 backdrop-blur-xl w-full max-w-sm rounded-3xl shadow-2xl relative z-10 text-center border-2 border-white flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="bg-white/90 backdrop-blur-xl w-full max-w-sm rounded-3xl shadow-2xl relative z-10 text-center border-2 border-white flex flex-col max-h-[85dvh] overflow-hidden transition-all duration-300">
             
-            <!-- Header -->
+            <!-- Header (固定頂部) -->
             <div class="pt-8 pb-4 px-8 shrink-0">
                 <h2 class="text-2xl font-bold text-morandi-600 mb-2 font-art">My Tour</h2>
                 <p class="text-sm text-gray-500">請選擇一位成員登入以開始編輯</p>
             </div>
             
-            <!-- Scrollable Regular Members List (Fixed Height for 4 items - Compact Version) -->
-            <!-- 修改：高度設為 h-64 (約 256px)，卡片高度縮減為 min-h-[100px]，padding 改為 p-2 -->
-            <div class="h-64 overflow-y-auto custom-scroll px-6 pb-2" v-if="!isDbLoading">
+            <!-- Scrollable Regular Members List (自動填滿中間) -->
+            <!-- 修正：使用 flex-1 與 min-h-0 讓列表佔據剩餘空間，若內容過多會自動出現卷軸 -->
+            <div class="flex-1 overflow-y-auto custom-scroll px-6 pb-2 min-h-0" v-if="!isDbLoading">
                 <div class="grid grid-cols-2 gap-3 pb-4">
                     <button 
                         v-for="member in regularMembers" 
@@ -542,14 +546,13 @@
                         @click="login(member)"
                         class="flex flex-col items-center justify-center p-2 rounded-2xl bg-white/50 hover:bg-white transition-all hover:scale-105 border border-transparent hover:border-morandi-200 shadow-sm min-h-[100px]"
                     >
-                        <!-- 頭像縮小為 w-12 h-12 -->
                         <div :class="['w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-1 shadow-sm', member.avatarColor]">
                             {{ member.avatarEmoji }}
                         </div>
                         <span class="font-bold text-gray-700 text-xs truncate w-full">{{ member.name }}</span>
                     </button>
                 </div>
-                <div v-if="regularMembers.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400 text-xs -mt-8">
+                <div v-if="regularMembers.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400 text-xs -mt-4">
                     <i class="fa-regular fa-face-smile text-2xl mb-2 opacity-50"></i>
                     <p>目前還沒有其他旅伴</p>
                     <p class="mt-1">點擊下方按鈕新增！</p>
@@ -557,12 +560,12 @@
             </div>
             
             <!-- Loading State -->
-            <div v-else class="h-64 flex flex-col items-center justify-center text-morandi-500">
+            <div v-else class="flex-1 flex flex-col items-center justify-center text-morandi-500 min-h-[150px]">
                 <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i>
                 <span class="text-sm">連結雲端資料庫中...</span>
             </div>
 
-            <!-- Fixed Bottom Section: Admin & Add -->
+            <!-- Fixed Bottom Section: Admin & Add (固定底部) -->
             <div class="p-4 bg-white/60 border-t border-white/50 grid grid-cols-2 gap-4 shrink-0 backdrop-blur-md" v-if="!isDbLoading">
                 <!-- Admin Button -->
                 <button 
@@ -777,18 +780,11 @@
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const apiKey = "AIzaSyDPRmYOZAhkeg2FyW0OihIOv89EpLjGC-c"; // API Key will be injected by environment
+    const apiKey = ""; // API Key will be injected by environment
     const { createApp, ref, computed, onMounted, watch } = Vue;
 
     // --- Firebase Init ---
-	const firebaseConfig = {
-	  apiKey: "AIzaSyB9jFPE0kv9HsCpdhMZpKv39eOmgxWJtxs",
-	  authDomain: "tripapp-v01.firebaseapp.com",
-	  projectId: "tripapp-v01",
-	  storageBucket: "tripapp-v01.firebasestorage.app",
-	  messagingSenderId: "807025775834",
-	  appId: "1:807025775834:web:d8dc610815cd0b52abc1e3"
-	};
+    const firebaseConfig = JSON.parse(__firebase_config);
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
