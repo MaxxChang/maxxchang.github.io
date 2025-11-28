@@ -56,6 +56,11 @@
             min-height: 100vh;
         }
 
+        /* Vue 防閃爍機制：在 Vue 載入完成前隱藏所有內容 */
+        [v-cloak] {
+            display: none !important;
+        }
+
         /* 液態玻璃擬態核心樣式 */
         .glass-panel {
             background: rgba(255, 255, 255, 0.65);
@@ -156,7 +161,8 @@
 </head>
 <body class="text-gray-700 antialiased selection:bg-morandi-200">
 
-<div id="app" class="relative max-w-md mx-auto min-h-screen pb-10 overflow-hidden shadow-2xl bg-white/30 backdrop-blur-sm sm:max-w-md md:max-w-lg lg:max-w-xl">
+<!-- 加入 v-cloak 防止未編譯的模板顯示 -->
+<div id="app" v-cloak class="relative max-w-md mx-auto min-h-screen pb-10 overflow-hidden shadow-2xl bg-white/30 backdrop-blur-sm sm:max-w-md md:max-w-lg lg:max-w-xl">
     
     <!-- 裝飾背景球 -->
     <div class="absolute -top-20 -left-20 w-64 h-64 bg-morandi-200 rounded-full mix-blend-multiply filter blur-2xl opacity-70 floating"></div>
@@ -170,7 +176,7 @@
             <div>
                 <h1 class="text-4xl text-morandi-600 tracking-wide font-art drop-shadow-sm">My Tour</h1>
                 
-                <!-- 動態資訊看板 (改為強制顯示) -->
+                <!-- 動態資訊看板 (強制顯示) -->
                 <div class="mt-3 flex items-center gap-3 bg-white/60 px-4 py-2 rounded-xl backdrop-blur-md border border-white/50 w-fit shadow-sm">
                     <div class="flex flex-col">
                         <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Current</span>
@@ -185,7 +191,6 @@
                         <span class="text-lg font-bold text-gray-800">{{ headerInfo.temperature }}°</span>
                     </div>
                     <div class="flex flex-col items-end ml-1 pl-2 border-l border-gray-200">
-                        <!-- 當沒有選取日期時，顯示今日 -->
                         <span class="text-[10px] font-bold text-gray-500">{{ getWeekDay(currentSelectedDate || new Date()) }}</span>
                         <span class="text-[10px] text-gray-400 font-mono">{{ (currentSelectedDate || new Date()).getMonth() + 1 }}/{{ (currentSelectedDate || new Date()).getDate() }}</span>
                     </div>
@@ -597,7 +602,7 @@
                 </button>
             </div>
 
-            <!-- 成員列表 -->
+            <!-- 成員列表 (僅在登入後或非註冊模式下顯示) -->
             <div v-if="!isRegistering" class="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scroll mb-6">
                 <div v-for="member in members" :key="member.id" class="flex items-center justify-between bg-white/50 p-3 rounded-xl">
                     <div class="flex items-center gap-3">
@@ -772,11 +777,18 @@
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const apiKey = ""; // API Key will be injected by environment
+    const apiKey = "AIzaSyDPRmYOZAhkeg2FyW0OihIOv89EpLjGC-c"; // API Key will be injected by environment
     const { createApp, ref, computed, onMounted, watch } = Vue;
 
     // --- Firebase Init ---
-    const firebaseConfig = JSON.parse(__firebase_config);
+	const firebaseConfig = {
+	  apiKey: "AIzaSyDkbk-p6uBbrQP83IlAMXz4ZNsbLpHsXzM",
+	  authDomain: "bangkoktrip2026.firebaseapp.com",
+	  projectId: "bangkoktrip2026",
+	  storageBucket: "bangkoktrip2026.firebasestorage.app",
+	  messagingSenderId: "581976273324",
+	  appId: "1:581976273324:web:440d58bcdcedb7320eca09"
+	};
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
