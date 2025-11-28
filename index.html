@@ -433,6 +433,34 @@
         </div>
     </main>
 
+    <!-- 設定檔錯誤提示 Modal (新增) -->
+    <div v-if="isConfigMissing" class="fixed inset-0 z-[90] flex items-center justify-center px-4">
+        <div class="absolute inset-0 bg-gray-900/80 backdrop-blur-md"></div>
+        <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl relative z-10 text-center border-2 border-red-100">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-triangle-exclamation text-2xl text-red-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">設定檔缺失</h3>
+            <p class="text-sm text-gray-500 mb-6 leading-relaxed">
+                偵測到您正在使用下載的檔案，但尚未設定 Firebase。<br>
+                請用文字編輯器打開 html 檔案，搜尋並修改以下部分：
+            </p>
+            <div class="bg-gray-100 rounded-xl p-4 text-left text-xs font-mono text-gray-600 overflow-x-auto mb-6 border border-gray-200">
+                <code>
+                    // TODO: 請在此處填入您的 Firebase 設定<br>
+                    firebaseConfig = {<br>
+                    &nbsp;&nbsp;apiKey: "...",<br>
+                    &nbsp;&nbsp;authDomain: "...",<br>
+                    &nbsp;&nbsp;...<br>
+                    };
+                </code>
+            </div>
+            <a href="https://console.firebase.google.com/" target="_blank" class="block w-full bg-morandi-400 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-morandi-500 transition-colors">
+                前往 Firebase Console
+            </a>
+        </div>
+    </div>
+
     <!-- AI 分析結果 Modal -->
     <div v-if="showAiAnalysisModal" class="fixed inset-0 z-[70] flex items-center justify-center px-4">
         <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="showAiAnalysisModal = false"></div>
@@ -538,7 +566,7 @@
             
             <!-- Scrollable Regular Members List (自動填滿中間) -->
             <!-- 修正：使用 flex-1 與 min-h-0 讓列表佔據剩餘空間，若內容過多會自動出現卷軸 -->
-            <div class="flex-1 overflow-y-auto custom-scroll px-6 pb-2 min-h-0" v-if="!isDbLoading">
+            <div class="flex-1 overflow-y-auto custom-scroll px-6 pb-2 min-h-0" v-if="!isDbLoading && !isConfigMissing">
                 <div class="grid grid-cols-2 gap-3 pb-4">
                     <button 
                         v-for="member in regularMembers" 
@@ -561,12 +589,13 @@
             
             <!-- Loading State -->
             <div v-else class="flex-1 flex flex-col items-center justify-center text-morandi-500 min-h-[150px]">
-                <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i>
-                <span class="text-sm">連結雲端資料庫中...</span>
+                <i v-if="!isConfigMissing" class="fa-solid fa-circle-notch fa-spin text-3xl mb-3"></i>
+                <span v-if="!isConfigMissing" class="text-sm">連結雲端資料庫中...</span>
+                <span v-else class="text-sm text-red-400">請完成設定以繼續</span>
             </div>
 
             <!-- Fixed Bottom Section: Admin & Add (固定底部) -->
-            <div class="p-4 bg-white/60 border-t border-white/50 grid grid-cols-2 gap-4 shrink-0 backdrop-blur-md" v-if="!isDbLoading">
+            <div class="p-4 bg-white/60 border-t border-white/50 grid grid-cols-2 gap-4 shrink-0 backdrop-blur-md" v-if="!isDbLoading && !isConfigMissing">
                 <!-- Admin Button -->
                 <button 
                     v-if="adminMember"
@@ -780,19 +809,56 @@
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const apiKey = ""; // API Key will be injected by environment
+    // 提示：若要部署到 GitHub，請在此處填入您的 API Key
+    const apiKey = "AIzaSyDPRmYOZAhkeg2FyW0OihIOv89EpLjGC-c"; 
+    
     const { createApp, ref, computed, onMounted, watch } = Vue;
 
     // --- Firebase Init ---
-    const firebaseConfig = JSON.parse(__firebase_config);
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    let firebaseConfig;
+    let appId = 'default-app-id';
+    let isConfigValid = true;
+
+    try {
+        // 嘗試讀取環境變數 (Preview Environment)
+        if (typeof __firebase_config !== 'undefined') {
+            firebaseConfig = JSON.parse(__firebase_config);
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        } else {
+            // 部署模式：請在此處填入您的設定
+            // TODO: 請在此處填入您的 Firebase 設定
+            firebaseConfig = {
+                apiKey: "AIzaSyB9jFPE0kv9HsCpdhMZpKv39eOmgxWJtxs",
+                authDomain: "tripapp-v01.firebaseapp.com",
+                projectId: "tripapp-v01",
+                storageBucket: "tripapp-v01.firebasestorage.app",
+                messagingSenderId: "807025775834",
+                appId: "1:807025775834:web:d8dc610815cd0b52abc1e3"
+            };
+            
+            // 檢查是否已設定 (簡單防呆)
+            if (firebaseConfig.apiKey === "請填入") {
+                isConfigValid = false;
+                console.warn("尚未設定 Firebase Config");
+            }
+        }
+    } catch (e) {
+        isConfigValid = false;
+        console.error("Config Error", e);
+    }
+
+    // 只有在設定有效時才初始化
+    let app, auth, db;
+    if (isConfigValid) {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+    }
 
     // Helper for Gemini API
     async function callGeminiAPI(prompt, isJsonMode = false) {
-        
+        if (!apiKey && !isConfigValid) return "請先設定 API Key";
+
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
         
         const payload = {
@@ -847,6 +913,7 @@
             const isEditing = ref(false);
             const isLoadingWeather = ref(false);
             const isDbLoading = ref(true); 
+            const isConfigMissing = ref(!isConfigValid); // Track config status
             
             const isAiLoading = ref(false);
             const showAiAnalysisModal = ref(false);
@@ -895,6 +962,11 @@
 
             // --- Firebase Setup ---
             const initFirebase = async () => {
+                if (!isConfigValid) {
+                    isDbLoading.value = false;
+                    return;
+                }
+
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
@@ -1378,7 +1450,7 @@
                 openAddModal, editItinerary, closeItineraryModal, saveItinerary, deleteItinerary, getGoogleMapLink,
                 isAiLoading, analyzeItinerary, showAiAnalysisModal, aiAnalysisResult, marked, previewMapUrl, updateMapPreview,
                 showAiImportModal, openAiImportModal, importText, parsedItineraries, isParsing, isImporting, parseItinerary, confirmImport,
-                isRegistering, openRegisterModal, isDbLoading,
+                isRegistering, openRegisterModal, isDbLoading, isConfigMissing,
                 adminMember, regularMembers // Added computed properties to return object
             };
         }
