@@ -161,7 +161,8 @@
 
       const handleSaveApiKey = (e) => {
         e.preventDefault();
-        setApiKey(tempApiKey);
+        // 自動去除前後空白，避免複製時多選了空白字元導致驗證失敗
+        setApiKey(tempApiKey.trim());
         setShowSettings(false);
       };
 
@@ -173,7 +174,7 @@
         setIsEstimating(true);
         try {
           const prompt = `估算1份「${newFood.name}」的營養價值。請回傳合理的整數數值。`;
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -192,6 +193,12 @@
               }
             })
           });
+
+          if (!response.ok) {
+             const errorData = await response.json();
+             throw new Error(errorData.error?.message || "網路請求失敗");
+          }
+
           const data = await response.json();
           const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (resultText) {
@@ -206,7 +213,7 @@
           }
         } catch (error) {
           console.error("AI Estimation Error:", error);
-          alert("估算失敗，請確認 API Key 是否正確或網路是否正常。");
+          alert(`估算失敗：\n${error.message}\n\n請確認您的 API Key 是否正確且有效。`);
         } finally {
           setIsEstimating(false);
         }
@@ -230,7 +237,7 @@
 
           const prompt = "請分析這張圖片中的食物。給出最可能的餐點名稱（name），以及估算一份該食物的熱量(calories)、蛋白質(protein)、碳水化合物(carbs)和脂肪(fat)。請確保回傳合理的整數數值。";
           
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -257,6 +264,11 @@
             })
           });
           
+          if (!response.ok) {
+             const errorData = await response.json();
+             throw new Error(errorData.error?.message || "網路請求失敗");
+          }
+
           const data = await response.json();
           const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (resultText) {
@@ -271,7 +283,7 @@
           }
         } catch (error) {
           console.error("Image Analysis Error:", error);
-          alert("圖片分析失敗，請確認 API Key 是否正確。");
+          alert(`圖片分析失敗：\n${error.message}\n\n請確認您的 API Key 是否正確。`);
         } finally {
           setIsEstimating(false);
           if (fileInputRef.current) fileInputRef.current.value = '';
@@ -288,13 +300,19 @@
           const foodList = currentDayRecords.map(r => r.name).join('、');
           const prompt = `我今天吃了：${foodList}。總共攝取了 ${dailyStats.calories}大卡，蛋白質 ${dailyStats.protein}g，碳水 ${dailyStats.carbs}g，脂肪 ${dailyStats.fat}g。請以專業健身教練的角度，給予我簡短1~2句繁體中文的飲食建議與鼓勵。`;
           
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }]
             })
           });
+
+          if (!response.ok) {
+             const errorData = await response.json();
+             throw new Error(errorData.error?.message || "網路請求失敗");
+          }
+
           const data = await response.json();
           const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (resultText) {
@@ -302,7 +320,7 @@
           }
         } catch (error) {
           console.error("AI Advice Error:", error);
-          alert("產生建議失敗，請確認 API Key 是否正確。");
+          alert(`產生建議失敗：\n${error.message}\n\n請確認您的 API Key 是否正確。`);
         } finally {
           setIsFetchingAdvice(false);
         }
@@ -342,8 +360,9 @@
                     <p className="text-xs text-gray-500 mb-3 leading-relaxed">
                       為了使用 AI 估算與教練建議功能，請填入您的 Google Gemini API Key。此金鑰僅會安全地儲存在您目前裝置的瀏覽器中，不會傳送至其他伺服器。
                     </p>
+                    {/* 將 type="password" 改為 type="text" 以便查看金鑰 */}
                     <input 
-                      type="password" 
+                      type="text" 
                       placeholder="AIzaSy..."
                       className="w-full bg-gray-50 border border-gray-200 text-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-mono text-sm"
                       value={tempApiKey}
