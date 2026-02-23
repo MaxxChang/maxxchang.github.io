@@ -31,6 +31,15 @@
     const { useState, useEffect, useMemo, useRef } = React;
 
     function App() {
+      // API Key State
+      const [apiKey, setApiKey] = useState(() => {
+        return localStorage.getItem('gemini_api_key') || '';
+      });
+      const [showSettings, setShowSettings] = useState(() => {
+        return !localStorage.getItem('gemini_api_key');
+      });
+      const [tempApiKey, setTempApiKey] = useState(apiKey);
+
       const [records, setRecords] = useState(() => {
         try {
           const saved = localStorage.getItem('diet_records');
@@ -61,8 +70,14 @@
       const [aiAdvice, setAiAdvice] = useState('');
       const [isFetchingAdvice, setIsFetchingAdvice] = useState(false);
       
-      // ⚠️ 請在這裡填寫您的 Gemini API Key
-      const apiKey = "AIzaSyCdurd9WVo-70N-su2CO8ba5Ec33dNWwoA";
+      // Save settings to Local Storage
+      useEffect(() => {
+        if (apiKey) {
+          localStorage.setItem('gemini_api_key', apiKey);
+        } else {
+          localStorage.removeItem('gemini_api_key');
+        }
+      }, [apiKey]);
 
       useEffect(() => {
         localStorage.setItem('diet_records', JSON.stringify(records));
@@ -144,9 +159,15 @@
         setRecords(prev => prev.filter(r => r.id !== id));
       };
 
+      const handleSaveApiKey = (e) => {
+        e.preventDefault();
+        setApiKey(tempApiKey);
+        setShowSettings(false);
+      };
+
       const estimateMacrosWithAI = async () => {
         if (!newFood.name.trim() || !apiKey) {
-          if (!apiKey) alert("請先在程式碼中填入 apiKey");
+          if (!apiKey) setShowSettings(true);
           return;
         }
         setIsEstimating(true);
@@ -185,7 +206,7 @@
           }
         } catch (error) {
           console.error("AI Estimation Error:", error);
-          alert("估算失敗，請確認 API Key 是否正確。");
+          alert("估算失敗，請確認 API Key 是否正確或網路是否正常。");
         } finally {
           setIsEstimating(false);
         }
@@ -194,7 +215,7 @@
       const analyzeImageWithAI = async (e) => {
         const file = e.target.files?.[0];
         if (!file || !apiKey) {
-           if (!apiKey) alert("請先在程式碼中填入 apiKey");
+           if (!apiKey) setShowSettings(true);
            return;
         }
 
@@ -250,7 +271,7 @@
           }
         } catch (error) {
           console.error("Image Analysis Error:", error);
-          alert("圖片分析失敗");
+          alert("圖片分析失敗，請確認 API Key 是否正確。");
         } finally {
           setIsEstimating(false);
           if (fileInputRef.current) fileInputRef.current.value = '';
@@ -258,7 +279,10 @@
       };
 
       const getDailyAIAdvice = async () => {
-        if (currentDayRecords.length === 0 || !apiKey) return;
+        if (currentDayRecords.length === 0 || !apiKey) {
+           if (!apiKey) setShowSettings(true);
+           return;
+        }
         setIsFetchingAdvice(true);
         try {
           const foodList = currentDayRecords.map(r => r.name).join('、');
@@ -278,6 +302,7 @@
           }
         } catch (error) {
           console.error("AI Advice Error:", error);
+          alert("產生建議失敗，請確認 API Key 是否正確。");
         } finally {
           setIsFetchingAdvice(false);
         }
@@ -296,6 +321,63 @@
       return (
         <div className="w-full max-w-md mx-auto h-[100dvh] bg-gray-50 flex flex-col font-sans relative overflow-hidden shadow-2xl sm:border sm:border-gray-200">
           
+          {/* Settings Modal - Shown if API key is missing or manually triggered */}
+          {showSettings && (
+            <div className="absolute inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+              <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800">
+                    <i className="fa-solid fa-gear text-indigo-500 mr-2"></i>設定
+                  </h2>
+                  {apiKey && (
+                    <button onClick={() => setShowSettings(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full">
+                      <i className="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                  )}
+                </div>
+                
+                <form onSubmit={handleSaveApiKey} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Gemini API Key</label>
+                    <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                      為了使用 AI 估算與教練建議功能，請填入您的 Google Gemini API Key。此金鑰僅會安全地儲存在您目前裝置的瀏覽器中，不會傳送至其他伺服器。
+                    </p>
+                    <input 
+                      type="password" 
+                      placeholder="AIzaSy..."
+                      className="w-full bg-gray-50 border border-gray-200 text-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-mono text-sm"
+                      value={tempApiKey}
+                      onChange={e => setTempApiKey(e.target.value)}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="pt-2 flex gap-3">
+                    {apiKey && (
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                           setTempApiKey('');
+                           setApiKey('');
+                           setShowSettings(false);
+                        }}
+                        className="flex-1 bg-red-50 text-red-600 font-bold rounded-xl py-3 hover:bg-red-100 transition-colors"
+                      >
+                        清除金鑰
+                      </button>
+                    )}
+                    <button 
+                      type="submit" 
+                      className="flex-[2] bg-indigo-600 text-white font-bold rounded-xl py-3 hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                      儲存設定
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="bg-white px-4 pt-6 pb-4 shadow-sm z-10 rounded-b-3xl">
             <div className="flex justify-between items-center mb-6">
@@ -303,8 +385,17 @@
                 <i className="fa-solid fa-chart-line text-indigo-600"></i>
                 健身飲食紀錄
               </h1>
-              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                 <i className="fa-solid fa-utensils text-indigo-600"></i>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowSettings(true)}
+                  className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+                  title="設定 API Key"
+                >
+                   <i className="fa-solid fa-gear text-sm"></i>
+                </button>
+                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                   <i className="fa-solid fa-utensils text-indigo-600"></i>
+                </div>
               </div>
             </div>
 
@@ -577,4 +668,3 @@
   </script>
 </body>
 </html>
-
